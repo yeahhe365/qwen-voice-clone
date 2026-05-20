@@ -1,6 +1,8 @@
-# Qwen Voice Clone CLI
+# Qwen Voice Clone
 
-通义千问语音克隆 API 命令行工具 — 从 [omni.qwen.ai/voice-clone](https://omni.qwen.ai/voice-clone) 逆向的语音克隆接口。
+通义千问语音克隆工具 — 从 [omni.qwen.ai/voice-clone](https://omni.qwen.ai/voice-clone) 逆向的语音克隆接口。
+
+提供 **WebUI** 和 **CLI** 两种使用方式。
 
 上传一段音频（10-60 秒），即可生成用该声音朗读任意文本的语音。
 
@@ -49,6 +51,19 @@ python3 qwen_voice_clone.py sample.mp3 \
 | `--model` | 模型选择 | `qwen3.5-omni-flash` |
 
 可选模型：`qwen3.5-omni-flash`、`qwen3.5-omni-plus`
+
+## WebUI 模式
+
+图形界面，无需配置环境变量：
+
+```bash
+pip install fastapi uvicorn python-multipart jinja2 oss2 requests
+python3 webui.py
+```
+
+打开 http://localhost:8008
+
+在网页中填入 Token 和 Cookies、上传音频、输入文本即可克隆。
 
 ## 输出
 

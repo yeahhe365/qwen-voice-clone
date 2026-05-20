@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen Voice Clone</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f7; color: #1d1d1f; min-height: 100vh;
+    display: flex; justify-content: center; padding: 40px 20px;
+  }
+  .container { max-width: 640px; width: 100%; }
+  h1 { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+  .subtitle { color: #86868b; font-size: 14px; margin-bottom: 28px; }
+  .card { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #555; }
+  input, textarea, select {
+    width: 100%; padding: 10px 12px; border: 1px solid #d2d2d7; border-radius: 8px;
+    font-size: 14px; background: #fff; outline: none; transition: border-color .15s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,.15); }
+  textarea { resize: vertical; font-family: inherit; }
+  .hint { font-size: 12px; color: #86868b; margin-top: 4px; }
+  .file-zone {
+    border: 2px dashed #d2d2d7; border-radius: 10px; padding: 28px; text-align: center;
+    cursor: pointer; transition: all .15s; position: relative;
+  }
+  .file-zone:hover, .file-zone.dragover { border-color: #0071e3; background: #f0f7ff; }
+  .file-zone.has-file { border-style: solid; border-color: #34c759; background: #f0fcf3; }
+  .file-zone input[type=file] { display: none; }
+  .file-icon { font-size: 36px; margin-bottom: 8px; }
+  .file-name { font-size: 14px; font-weight: 500; word-break: break-all; }
+  .file-size { font-size: 12px; color: #86868b; margin-top: 2px; }
+  .btn {
+    width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+    cursor: pointer; transition: all .15s; background: #0071e3; color: #fff;
+  }
+  .btn:hover { background: #0060c1; }
+  .btn:disabled { background: #a0c5e8; cursor: not-allowed; }
+  .btn-progress { background: #86868b; pointer-events: none; }
+  .status { margin-top: 12px; font-size: 13px; color: #555; }
+  .status .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #d2d2d7; border-top-color: #0071e3; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-card { display: none; }
+  .result-card.show { display: block; }
+  .result-card audio { width: 100%; margin-top: 12px; }
+  .result-actions { display: flex; gap: 8px; margin-top: 10px; }
+  .result-actions a { flex: 1; text-align: center; padding: 8px; border-radius: 8px; font-size: 13px; text-decoration: none; font-weight: 500; }
+  .btn-download { background: #34c759; color: #fff; }
+  .btn-download:hover { background: #28a745; }
+  .btn-copy { background: #f0f0f0; color: #333; }
+  .btn-copy:hover { background: #e0e0e0; }
+  .error { background: #fff2f0; color: #cf3a2f; padding: 12px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  @media (max-width: 480px) { .row { flex-direction: column; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🔊 Qwen Voice Clone</h1>
+  <p class="subtitle">通义千问语音克隆 WebUI — 上传一段音频即可克隆该声音</p>
+
+  <form id="cloneForm">
+    <div class="card">
+      <label>Token <span style="color:#cf3a2f">*</span></label>
+      <input type="password" id="token" placeholder="粘贴 localStorage.token 的值" autocomplete="off">
+      <div class="hint">从浏览器 DevTools → Application → Local Storage → omni.qwen.ai → token</div>
+
+      <label style="margin-top:14px">Cookies</label>
+      <textarea id="cookies" rows="2" placeholder="acw_tc=...; cna=...; aui=...; ...（可选）"></textarea>
+      <div class="hint">复制 DevTools → Application → Cookies 的值，有些cookie不是必须的</div>
+    </div>
+
+    <div class="card">
+      <label>上传音频 <span style="color:#cf3a2f">*</span></label>
+      <div class="file-zone" id="fileZone">
+        <div class="file-icon" id="fileIcon">📁</div>
+        <div class="file-name" id="fileName">点击或拖拽选择音频文件</div>
+        <div class="file-size" id="fileSize">支持 mp3 / wav / m4a，10-60 秒</div>
+        <input type="file" id="file" accept="audio/*">
+      </div>
+    </div>
+
+    <div class="card">
+      <label>合成文本</label>
+      <textarea id="text" rows="2">你好，我是你的AI助手，今天天气不错，我们去公园散步吧。</textarea>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>模型</label>
+          <select id="model">
+            <option value="qwen3.5-omni-flash">qwen3.5-omni-flash</option>
+            <option value="qwen3.5-omni-plus">qwen3.5-omni-plus</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn" id="submitBtn">开始克隆</button>
+  </form>
+
+  <div class="status" id="status" style="display:none"></div>
+  <div class="error" id="error" style="display:none"></div>
+
+  <div class="card result-card" id="resultCard">
+    <label>✅ 克隆完成</label>
+    <audio id="audioPlayer" controls></audio>
+    <div class="result-actions">
+      <a class="btn-download" id="downloadBtn" download="cloned_voice.wav">下载</a>
+      <a class="btn-copy" id="copyBtn" href="javascript:void(0)">复制链接</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // File zone
+  const fileInput = document.getElementById('file');
+  const fileZone = document.getElementById('fileZone');
+  const fileName = document.getElementById('fileName');
+  const fileSize = document.getElementById('fileSize');
+  const fileIcon = document.getElementById('fileIcon');
+
+  fileZone.addEventListener('click', () => fileInput.click());
+  fileZone.addEventListener('dragover', e => { e.preventDefault(); fileZone.classList.add('dragover'); });
+  fileZone.addEventListener('dragleave', () => fileZone.classList.remove('dragover'));
+  fileZone.addEventListener('drop', e => { e.preventDefault(); fileZone.classList.remove('dragover'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; updateFileInfo(); } });
+  fileInput.addEventListener('change', updateFileInfo);
+
+  function updateFileInfo() {
+    const f = fileInput.files[0];
+    if (f) {
+      fileZone.classList.add('has-file');
+      fileIcon.textContent = '🎵';
+      fileName.textContent = f.name;
+      const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : (f.size/1024).toFixed(0)+' KB';
+      fileSize.textContent = size;
+    }
+  }
+
+  // Form submit
+  const form = document.getElementById('cloneForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const status = document.getElementById('status');
+  const error = document.getElementById('error');
+  const resultCard = document.getElementById('resultCard');
+  const audioPlayer = document.getElementById('audioPlayer');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const copyBtn = document.getElementById('copyBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const token = document.getElementById('token').value.trim();
+    if (!token) { showError('请填写 Token'); return; }
+    if (!fileInput.files[0]) { showError('请选择音频文件'); return; }
+
+    hideError();
+    resultCard.classList.remove('show');
+    submitBtn.disabled = true;
+    submitBtn.textContent = '克隆中...';
+    submitBtn.classList.add('btn-progress');
+    showStatus('正在获取 OSS 上传凭证...');
+
+    const fd = new FormData();
+    fd.append('token', token);
+    fd.append('cookies', document.getElementById('cookies').value.trim());
+    fd.append('file', fileInput.files[0]);
+    fd.append('text', document.getElementById('text').value.trim());
+    fd.append('model', document.getElementById('model').value);
+
+    try {
+      const resp = await fetch('/api/clone', { method: 'POST', body: fd });
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        showError(data.error || `服务器错误 (${resp.status})`);
+        return;
+      }
+
+      showStatus('克隆成功！');
+      resultCard.classList.add('show');
+      audioPlayer.src = data.audio_url;
+      audioPlayer.load();
+      downloadBtn.href = data.audio_url;
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(data.audio_url).then(
+          () => { copyBtn.textContent = '已复制'; setTimeout(() => copyBtn.textContent = '复制链接', 2000); },
+          () => { prompt('复制链接：', data.audio_url); }
+        );
+      };
+    } catch (err) {
+      showError('网络错误：' + err.message);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '开始克隆';
+      submitBtn.classList.remove('btn-progress');
+    }
+  });
+
+  function showStatus(msg) { status.style.display = 'block'; status.innerHTML = '<span class="spinner"></span> ' + msg; }
+  function showError(msg) { error.style.display = 'block'; error.textContent = '❌ ' + msg; status.style.display = 'none'; }
+  function hideError() { error.style.display = 'none'; }
+</script>
+</body>
+</html>
