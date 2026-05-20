@@ -66,11 +66,11 @@
   <form id="cloneForm">
     <div class="card">
       <label>Token <span style="color:#cf3a2f">*</span></label>
-      <input type="password" id="token" placeholder="粘贴 localStorage.token 的值" autocomplete="off">
+      <input type="password" id="token" placeholder="粘贴 localStorage.token 的值" value="{{ default_token }}" autocomplete="off">
       <div class="hint">从浏览器 DevTools → Application → Local Storage → omni.qwen.ai → token</div>
 
       <label style="margin-top:14px">Cookies</label>
-      <textarea id="cookies" rows="2" placeholder="acw_tc=...; cna=...; aui=...; ...（可选）"></textarea>
+      <textarea id="cookies" rows="2" placeholder="acw_tc=...; cna=...; aui=...; ...（可选）">{{ default_cookies }}</textarea>
       <div class="hint">复制 DevTools → Application → Cookies 的值，有些cookie不是必须的</div>
     </div>
 

@@ -7,13 +7,26 @@ import requests
 import oss2
 from fastapi import FastAPI, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 app = FastAPI(title="Qwen Voice Clone WebUI")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 BASE_URL = "https://omni.qwen.ai"
 API_PREFIX = "/api/v2/omni"
+
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), "templates", "index.html")
+CREDS_PATH = os.path.join(os.path.expanduser("~"), ".qwen-voice-creds.json")
+
+
+def load_creds():
+    try:
+        with open(CREDS_PATH) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
 
 def build_headers(token, cookies_str, extra=None):
     h = {
@@ -49,7 +62,19 @@ def get_user_id(token):
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return HTMLResponse(open(os.path.join(os.path.dirname(__file__), "templates", "index.html")).read())
+    html = open(TEMPLATE_PATH).read()
+    token = os.environ.get("QWEN_TOKEN") or load_creds().get("token", "")
+    cookies = os.environ.get("QWEN_COOKIES") or load_creds().get("cookies", "")
+    html = html.replace("{{ default_token }}", token)
+    html = html.replace("{{ default_cookies }}", cookies)
+    return HTMLResponse(html)
+
+
+@app.post("/api/creds")
+async def save_creds(body: dict):
+    with open(CREDS_PATH, "w") as f:
+        json.dump(body, f)
+    return {"ok": True}
 
 @app.post("/api/clone")
 async def clone(
@@ -119,6 +144,7 @@ async def clone(
             pass
 
     if audio_url:
+        save_creds({"token": token, "cookies": cookies})
         return {"audio_url": audio_url}
     return JSONResponse({"error": "No audio URL in response"}, status=500)
 
