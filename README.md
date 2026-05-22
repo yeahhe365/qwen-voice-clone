@@ -1,5 +1,9 @@
 # Qwen Voice Clone
 
+<p align="center">
+  <a href="./README.md">中文</a> | <a href="./README.en.md">English</a>
+</p>
+
 通义千问语音克隆工具 — 从 [omni.qwen.ai/voice-clone](https://omni.qwen.ai/voice-clone) 逆向的语音克隆接口。
 
 提供 **WebUI** 和 **CLI** 两种使用方式。
