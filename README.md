@@ -79,6 +79,12 @@ python3 webui.py
 - `token` cookie 是 HttpOnly 的，无法通过 `document.cookie` 读取，需从 `localStorage.token` 获取
 - 请求头必须包含 `source: web`、`version: 0.0.5`、`timezone`，否则服务端返回 `Verification failed`
 
+---
+
+## 友链
+
+- [Linux.do](https://linux.do/)：也称 L 站，是一个活跃的中文技术社区，围绕 AI、软件开发、资源分享与前沿资讯展开讨论；社区愿景是“新的理想型社区”，社区文化是“真诚、友善、团结、专业，共建你我引以为荣之社区”。
+
 ## License
 
 MIT
